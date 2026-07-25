@@ -39,7 +39,7 @@ public class SoldeToutCompteEngine {
                 .calculateWithholding(new TaxableAmounts(grossAmount, seniorityBonus))
                 .setScale(SCALE, RoundingMode.HALF_UP);
 
-        BigDecimal noticeViolationPenalty = BigDecimal.ZERO.setScale(SCALE);
+        BigDecimal noticeViolationPenalty = calculateNoticeViolationPenalty(file);
         BigDecimal netAmount = grossAmount.subtract(taxWithholding).subtract(noticeViolationPenalty);
 
         return new SeveranceStatement(
@@ -72,5 +72,12 @@ public class SoldeToutCompteEngine {
                 .add(BigDecimal.valueOf(yearsAt15Percent).multiply(TAUX_PRIME_AU_DELA_DE_5_ANS));
 
         return file.baseMonthlySalary().multiply(bonusRate).setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateNoticeViolationPenalty(EmployeeDepartureFile file) {
+        boolean penaliteApplicable = file.reason() == DepartureReason.DEMISSION && !file.noticePeriodRespected();
+        return penaliteApplicable
+                ? file.baseMonthlySalary().setScale(SCALE, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(SCALE);
     }
 }
