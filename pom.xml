@@ -161,8 +161,8 @@
                             <generatorName>spring</generatorName>
                             <inputSpec>${project.basedir}/src/main/resources/api/inventory.yaml</inputSpec>
                             <output>${project.build.directory}/generated-sources/api</output>
-                            <apiPackage>com.example.demo.api</apiPackage>
-                            <modelPackage>com.example.demo.dto</modelPackage>
+                            <apiPackage>org.example.projet_group_with_coudy.api</apiPackage>
+                            <modelPackage>org.example.projet_group_with_coudy.dto</modelPackage>
                             <configOptions>
                                 <sourceFolder>src/gen/java/main</sourceFolder>
                                 <library>spring-boot</library>
