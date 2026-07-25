@@ -87,13 +87,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Chargement du fichier .env (non commite) comme proprietes Spring -->
-        <dependency>
-            <groupId>me.paulschwarz</groupId>
-            <artifactId>spring-dotenv</artifactId>
-            <version>4.0.0</version>
-        </dependency>
-
     </dependencies>
 
     <build>
