@@ -103,4 +103,28 @@ class SoldeToutCompteEngineTest {
 
         assertEquals(new BigDecimal("0.00"), statement.seniorityBonus());
     }
+
+    @Test
+    void retient_un_mois_de_salaire_si_le_preavis_n_est_pas_respecte_et_le_solde_peut_devenir_negatif() {
+        // Besoin 3 : demission sans respect du preavis -> penalite = 1 mois de salaire de base (630000)
+        // indemnite = 30000/j * 2j = 60000.00 ; net avant penalite = 60000-3000=57000 ; net final = 57000-630000 = -573000.00
+        when(taxAdministrationPort.calculateWithholding(
+                new TaxableAmounts(new BigDecimal("60000.00"), new BigDecimal("0.00"))))
+                .thenReturn(new BigDecimal("3000.00"));
+
+        SoldeToutCompteEngine engine = new SoldeToutCompteEngine(taxAdministrationPort, laborInspectionPort);
+        EmployeeDepartureFile file = new EmployeeDepartureFile(
+                "emp-4",
+                LocalDate.of(2023, 1, 1),
+                LocalDate.of(2026, 7, 31),
+                DepartureReason.DEMISSION,
+                new BigDecimal("630000"),
+                2,
+                false);
+
+        SeveranceStatement statement = engine.calculate(file);
+
+        assertEquals(new BigDecimal("630000.00"), statement.noticeViolationPenalty());
+        assertEquals(new BigDecimal("-573000.00"), statement.netAmount());
+    }
 }
