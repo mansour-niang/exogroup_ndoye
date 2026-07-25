@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: API Solde de Tout Compte
+  description: >
+    API permettant de soumettre le dossier de depart d'un employe et
+    d'obtenir le detail financier de son solde de tout compte
+    (indemnites, prime d'anciennete, retenues, montant net, indicateur d'audit).
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: SoldeToutCompte
+    description: Calcul du solde de tout compte d'un employe quittant l'entreprise
+
+paths:
+  /soldes-tout-compte:
+    post:
+      tags:
+        - SoldeToutCompte
+      operationId: calculerSoldeToutCompte
+      summary: Calcule le solde de tout compte d'un employe a partir de son dossier de depart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DossierDepart'
+      responses:
+        '200':
+          description: Detail financier du solde de tout compte calcule avec succes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoldeToutCompte'
+        '400':
+          description: Dossier de depart invalide (champs manquants ou incoherents)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErreurValidation'
+
+components:
+  schemas:
+
+    MotifDepart:
+      type: string
+      description: >
+        Motif du depart de l'employe. Conditionne l'application de la prime
+        d'anciennete (Besoin 2) et de la penalite de preavis (Besoin 3).
+      enum:
+        - DEMISSION
+        - LICENCIEMENT_ECONOMIQUE
+        - LICENCIEMENT_FAUTE_GRAVE
+        - RETRAITE
+
+    DossierDepart:
+      type: object
+      description: Informations de depart transmises par le service RH pour un employe.
+      additionalProperties: false
+      required:
+        - employeeId
+        - dateDebutContrat
+        - dateFinContrat
+        - motifDepart
+        - salaireMensuelBase
+        - joursCongesRestants
+        - preavisRespecte
+      properties:
+        employeeId:
+          type: string
+          description: Identifiant unique de l'employe (matricule).
+          example: "EMP-00123"
+        dateDebutContrat:
+          type: string
+          format: date
+          description: Date d'entree de l'employe dans l'entreprise.
+          example: "2019-03-01"
+        dateFinContrat:
+          type: string
+          format: date
+          description: Date de fin de contrat (dernier jour travaille).
+          example: "2026-07-31"
+        motifDepart:
+          $ref: '#/components/schemas/MotifDepart'
+        salaireMensuelBase:
+          type: number
+          description: >
+            Salaire mensuel de base de l'employe, en XOF. Type number sans format
+            afin de garantir un mapping vers BigDecimal (precision monetaire requise).
+          minimum: 0
+          exclusiveMinimum: true
+          example: 450000
+        joursCongesRestants:
+          type: integer
+          format: int32
+          description: >
+            Nombre de jours de conges payes restants et non pris (Besoin 1).
+            Un mois standard compte 21 jours pour la valorisation.
+          minimum: 0
+          example: 12
+        preavisRespecte:
+          type: boolean
+          description: >
+            Indique si l'employe a respecte son delai de preavis (Besoin 3).
+            Pertinent uniquement en cas de demission ; ignore pour les autres motifs.
+          example: true
+
+    SoldeToutCompte:
+      type: object
+      description: Detail financier final du solde de tout compte calcule.
+      additionalProperties: false
+      required:
+        - employeeId
+        - montantIndemniteCongesPayes
+        - montantPrimeAnciennete
+        - montantPenalitePreavis
+        - montantBrut
+        - montantDeductionsFiscales
+        - montantNet
+        - indicateurAudit
+      properties:
+        employeeId:
+          type: string
+          description: Identifiant unique de l'employe (matricule).
+          example: "EMP-00123"
+        montantIndemniteCongesPayes:
+          type: number
+          description: Indemnite compensatrice de conges payes non pris (Besoin 1).
+          example: 257142.86
+        montantPrimeAnciennete:
+          type: number
+          description: Prime d'anciennete versee selon le motif de depart (Besoin 2).
+          example: 225000
+        montantPenalitePreavis:
+          type: number
+          description: >
+            Montant retenu pour non-respect du preavis (Besoin 3). Egal a zero
+            si le preavis a ete respecte ou si le motif n'est pas une demission.
+          example: 0
+        montantBrut:
+          type: number
+          description: >
+            Montant brut total soumis a l'administration fiscale
+            (indemnite conges payes + prime d'anciennete) (Besoin 4).
+          example: 482142.86
+        montantDeductionsFiscales:
+          type: number
+          description: >
+            Retenue fiscale calculee par le systeme externe de l'administration
+            fiscale, en tenant compte de l'exoneration de la prime d'anciennete
+            jusqu'a 5 000 000 XOF (Besoin 4).
+          example: 34000
+        montantNet:
+          type: number
+          description: >
+            Montant net final du solde de tout compte, apres deductions fiscales
+            et penalite de preavis. Peut etre negatif (Besoin 3).
+          example: 448142.86
+        indicateurAudit:
+          type: boolean
+          description: >
+            Indique si le montant net depasse strictement 30 000 000 XOF,
+            declenchant la notification de l'Inspection du Travail (Besoin 5).
+          example: false
+
+    ErreurValidation:
+      type: object
+      description: Detail d'une erreur de validation du dossier de depart.
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Le champ salaireMensuelBase doit etre strictement positif"
+        champs:
+          type: array
+          items:
+            type: string
+          example: ["salaireMensuelBase"]
