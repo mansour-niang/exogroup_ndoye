@@ -15,6 +15,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -126,5 +131,55 @@ class SoldeToutCompteEngineTest {
 
         assertEquals(new BigDecimal("630000.00"), statement.noticeViolationPenalty());
         assertEquals(new BigDecimal("-573000.00"), statement.netAmount());
+    }
+
+    @Test
+    void notifie_l_inspection_du_travail_si_le_montant_net_depasse_strictement_30_millions() {
+        // 10 ans -> 125% de 30000000 = 37500000.00 de prime, indemnite=0, tax mock=2000000.00
+        // net = 37500000 - 2000000 = 35500000.00 (> 30000000)
+        when(taxAdministrationPort.calculateWithholding(
+                new TaxableAmounts(new BigDecimal("37500000.00"), new BigDecimal("37500000.00"))))
+                .thenReturn(new BigDecimal("2000000.00"));
+
+        SoldeToutCompteEngine engine = new SoldeToutCompteEngine(taxAdministrationPort, laborInspectionPort);
+        EmployeeDepartureFile file = new EmployeeDepartureFile(
+                "emp-5",
+                LocalDate.of(2016, 1, 15),
+                LocalDate.of(2026, 1, 15),
+                DepartureReason.RETRAITE,
+                new BigDecimal("30000000"),
+                0,
+                true);
+
+        SeveranceStatement statement = engine.calculate(file);
+
+        assertEquals(new BigDecimal("35500000.00"), statement.netAmount());
+        assertEquals(true, statement.auditFlagged());
+        verify(laborInspectionPort, times(1))
+                .reportSeveranceForAudit("emp-5", new BigDecimal("35500000.00"));
+    }
+
+    @Test
+    void ne_notifie_pas_l_inspection_du_travail_si_le_montant_net_est_exactement_30_millions() {
+        // 10 ans -> 125% de 24000000 = 30000000.00 de prime, indemnite=0, tax mock=0.00 -> net = 30000000.00 pile
+        when(taxAdministrationPort.calculateWithholding(
+                new TaxableAmounts(new BigDecimal("30000000.00"), new BigDecimal("30000000.00"))))
+                .thenReturn(new BigDecimal("0.00"));
+
+        SoldeToutCompteEngine engine = new SoldeToutCompteEngine(taxAdministrationPort, laborInspectionPort);
+        EmployeeDepartureFile file = new EmployeeDepartureFile(
+                "emp-6",
+                LocalDate.of(2016, 1, 15),
+                LocalDate.of(2026, 1, 15),
+                DepartureReason.RETRAITE,
+                new BigDecimal("24000000"),
+                0,
+                true);
+
+        SeveranceStatement statement = engine.calculate(file);
+
+        assertEquals(new BigDecimal("30000000.00"), statement.netAmount());
+        assertEquals(false, statement.auditFlagged());
+        verify(laborInspectionPort, never()).reportSeveranceForAudit(anyString(), any());
     }
 }
