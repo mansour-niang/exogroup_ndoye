@@ -21,6 +21,7 @@ public class SoldeToutCompteEngine {
     private static final BigDecimal TAUX_PRIME_AU_DELA_DE_5_ANS = new BigDecimal("0.15");
     private static final Set<DepartureReason> MOTIFS_SANS_PRIME_ANCIENNETE =
             Set.of(DepartureReason.DEMISSION, DepartureReason.LICENCIEMENT_FAUTE_GRAVE);
+    private static final BigDecimal SEUIL_AUDIT = new BigDecimal("30000000.00");
 
     private final TaxAdministrationPort taxAdministrationPort;
     private final LaborInspectionPort laborInspectionPort;
@@ -42,6 +43,11 @@ public class SoldeToutCompteEngine {
         BigDecimal noticeViolationPenalty = calculateNoticeViolationPenalty(file);
         BigDecimal netAmount = grossAmount.subtract(taxWithholding).subtract(noticeViolationPenalty);
 
+        boolean auditFlagged = netAmount.compareTo(SEUIL_AUDIT) > 0;
+        if (auditFlagged) {
+            laborInspectionPort.reportSeveranceForAudit(file.employeeId(), netAmount);
+        }
+
         return new SeveranceStatement(
                 file.employeeId(),
                 paidLeaveIndemnity,
@@ -50,7 +56,7 @@ public class SoldeToutCompteEngine {
                 grossAmount,
                 taxWithholding,
                 netAmount,
-                false);
+                auditFlagged);
     }
 
     private BigDecimal calculatePaidLeaveIndemnity(EmployeeDepartureFile file) {
