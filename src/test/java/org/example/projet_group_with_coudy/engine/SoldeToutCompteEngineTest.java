@@ -54,4 +54,53 @@ class SoldeToutCompteEngineTest {
         assertEquals(new BigDecimal("285000.00"), statement.netAmount());
         assertEquals(false, statement.auditFlagged());
     }
+
+    @Test
+    void verse_la_prime_d_anciennete_pour_un_depart_a_la_retraite() {
+        // Besoin 2 : 7 ans completes -> 5*10% + 2*15% = 80% de 500000 = 400000.00
+        // 0 jour de conge restant pour isoler la prime
+        when(taxAdministrationPort.calculateWithholding(
+                new TaxableAmounts(new BigDecimal("400000.00"), new BigDecimal("400000.00"))))
+                .thenReturn(new BigDecimal("20000.00"));
+
+        SoldeToutCompteEngine engine = new SoldeToutCompteEngine(taxAdministrationPort, laborInspectionPort);
+        EmployeeDepartureFile file = new EmployeeDepartureFile(
+                "emp-2",
+                LocalDate.of(2019, 1, 15),
+                LocalDate.of(2026, 1, 15),
+                DepartureReason.RETRAITE,
+                new BigDecimal("500000"),
+                0,
+                true);
+
+        SeveranceStatement statement = engine.calculate(file);
+
+        assertEquals(new BigDecimal("0.00"), statement.paidLeaveIndemnity());
+        assertEquals(new BigDecimal("400000.00"), statement.seniorityBonus());
+        assertEquals(new BigDecimal("400000.00"), statement.grossAmount());
+        assertEquals(new BigDecimal("20000.00"), statement.taxWithholding());
+        assertEquals(new BigDecimal("380000.00"), statement.netAmount());
+    }
+
+    @Test
+    void ne_verse_pas_de_prime_d_anciennete_en_cas_de_licenciement_pour_faute_grave() {
+        // Besoin 2 (exception) : 10 ans d'anciennete mais faute grave -> prime = 0
+        when(taxAdministrationPort.calculateWithholding(
+                new TaxableAmounts(new BigDecimal("0.00"), new BigDecimal("0.00"))))
+                .thenReturn(new BigDecimal("0.00"));
+
+        SoldeToutCompteEngine engine = new SoldeToutCompteEngine(taxAdministrationPort, laborInspectionPort);
+        EmployeeDepartureFile file = new EmployeeDepartureFile(
+                "emp-3",
+                LocalDate.of(2016, 1, 15),
+                LocalDate.of(2026, 1, 15),
+                DepartureReason.LICENCIEMENT_FAUTE_GRAVE,
+                new BigDecimal("500000"),
+                0,
+                true);
+
+        SeveranceStatement statement = engine.calculate(file);
+
+        assertEquals(new BigDecimal("0.00"), statement.seniorityBonus());
+    }
 }
