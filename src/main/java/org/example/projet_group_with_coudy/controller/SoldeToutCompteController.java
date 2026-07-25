@@ -7,6 +7,7 @@ import org.example.projet_group_with_coudy.engine.SoldeToutCompteEngine;
 import org.example.projet_group_with_coudy.mapper.SoldeToutCompteMapper;
 import org.example.projet_group_with_coudy.model.EmployeeDepartureFile;
 import org.example.projet_group_with_coudy.model.SeveranceStatement;
+import org.example.projet_group_with_coudy.repository.SeveranceStatementRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,16 +16,20 @@ public class SoldeToutCompteController implements SoldeToutCompteApi {
 
     private final SoldeToutCompteEngine engine;
     private final SoldeToutCompteMapper mapper;
+    private final SeveranceStatementRepository repository;
 
-    public SoldeToutCompteController(SoldeToutCompteEngine engine, SoldeToutCompteMapper mapper) {
+    public SoldeToutCompteController(
+            SoldeToutCompteEngine engine, SoldeToutCompteMapper mapper, SeveranceStatementRepository repository) {
         this.engine = engine;
         this.mapper = mapper;
+        this.repository = repository;
     }
 
     @Override
     public ResponseEntity<SoldeToutCompte> calculerSoldeToutCompte(DossierDepart dossierDepart) {
         EmployeeDepartureFile file = mapper.toDomain(dossierDepart);
         SeveranceStatement statement = engine.calculate(file);
+        repository.save(statement);
         return ResponseEntity.ok(mapper.toDto(statement));
     }
 }
