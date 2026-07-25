@@ -2,6 +2,7 @@ package org.example.projet_group_with_coudy.controller;
 
 import org.example.projet_group_with_coudy.engine.SoldeToutCompteEngine;
 import org.example.projet_group_with_coudy.mapper.SoldeToutCompteMapper;
+import org.example.projet_group_with_coudy.repository.SeveranceStatementRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -22,6 +23,9 @@ class SoldeToutCompteValidationTest {
 
     @MockitoBean
     private SoldeToutCompteMapper mapper;
+
+    @MockitoBean
+    private SeveranceStatementRepository repository;
 
     @Test
     void rejette_un_salaire_mensuel_de_base_negatif_avec_400() throws Exception {
