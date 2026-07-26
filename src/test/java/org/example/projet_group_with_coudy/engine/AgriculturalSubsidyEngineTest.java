@@ -13,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AgriculturalSubsidyEngineTest {
@@ -28,8 +27,6 @@ class AgriculturalSubsidyEngineTest {
     void applique_le_taux_vivrier_deux_fois_superieur_au_taux_export() {
         // Besoin 1 : MIL (vivriere) = 100000 XOF/ha, 10 ha => 1000000.00
         // Rendement (600) > seuil critique du MIL (500) -> pas de penalite ; pas de secheresse -> pas de fonds d'urgence
-        when(meteorologyPort.isSevereDrought("Kaffrine")).thenReturn(false);
-
         AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
         FarmDeclaration declaration = new FarmDeclaration(
                 "farm-1", new BigDecimal("10"), CropType.MIL, false, new BigDecimal("600"), "Kaffrine");
@@ -43,8 +40,6 @@ class AgriculturalSubsidyEngineTest {
     @Test
     void applique_le_taux_export_deux_fois_inferieur_au_taux_vivrier() {
         // Besoin 1 : ARACHIDE (export) = 50000 XOF/ha, 10 ha => 500000.00
-        when(meteorologyPort.isSevereDrought("Kaffrine")).thenReturn(false);
-
         AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
         FarmDeclaration declaration = new FarmDeclaration(
                 "farm-2", new BigDecimal("10"), CropType.ARACHIDE, false, new BigDecimal("900"), "Kaffrine");
