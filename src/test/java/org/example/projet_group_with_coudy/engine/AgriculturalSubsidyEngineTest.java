@@ -49,4 +49,17 @@ class AgriculturalSubsidyEngineTest {
         assertEquals(new BigDecimal("500000.00"), allocation.baseSubsidy());
         assertEquals(new BigDecimal("500000.00"), allocation.finalAmount());
     }
+
+    @Test
+    void applique_un_bonus_de_15_pourcent_si_certification_biologique_valide() {
+        // Besoin 2 : MIL, 10 ha => base=1000000.00, bonus=15%=150000.00, final=1150000.00
+        AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
+        FarmDeclaration declaration = new FarmDeclaration(
+                "farm-3", new BigDecimal("10"), CropType.MIL, true, new BigDecimal("600"), "Kaffrine");
+
+        SubsidyAllocation allocation = engine.calculate(declaration);
+
+        assertEquals(new BigDecimal("150000.00"), allocation.ecologicalBonus());
+        assertEquals(new BigDecimal("1150000.00"), allocation.finalAmount());
+    }
 }
