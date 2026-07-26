@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: API Moteur AgriTech
+  description: >
+    API permettant de soumettre le bilan de fin de saison d'une exploitation
+    agricole et d'obtenir le detail financier de son allocation de subvention
+    (subvention de base, bonus ecologique, penalite, indemnite climatique,
+    montant final, statut d'allocation).
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: AgriTech
+    description: Calcul de l'allocation de subvention agricole d'une exploitation
+
+paths:
+  /allocations-subvention:
+    post:
+      tags:
+        - AgriTech
+      operationId: calculerAllocationSubvention
+      summary: Calcule l'allocation de subvention d'une exploitation a partir de sa declaration de fin de saison
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclarationExploitation'
+      responses:
+        '200':
+          description: Detail financier de l'allocation de subvention calculee avec succes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationSubvention'
+        '400':
+          description: Declaration invalide (champs manquants ou incoherents)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErreurValidation'
+
+components:
+  schemas:
+
+    TypeCulture:
+      type: string
+      description: >
+        Culture declaree. MIL, SORGHO et MAIS sont des cultures vivrieres ;
+        ARACHIDE et COTON sont des cultures d'exportation (Besoin 1).
+      enum:
+        - MIL
+        - SORGHO
+        - MAIS
+        - ARACHIDE
+        - COTON
+
+    StatutAllocation:
+      type: string
+      description: Statut de l'allocation de la subvention.
+      enum:
+        - ALLOUE
+        - EN_ATTENTE_AUDIT
+
+    DeclarationExploitation:
+      type: object
+      description: Bilan de fin de saison d'une exploitation agricole.
+      additionalProperties: false
+      required:
+        - farmId
+        - hectares
+        - typeCulture
+        - certificationBiologique
+        - rendementDeclareParHectare
+        - localisation
+      properties:
+        farmId:
+          type: string
+          description: Identifiant unique de l'exploitation.
+          example: "FARM-00456"
+        hectares:
+          type: number
+          description: >
+            Surface de l'exploitation en hectares. Type number sans format
+            afin de garantir un mapping vers BigDecimal (precision requise).
+          minimum: 0
+          exclusiveMinimum: true
+          example: 12.5
+        typeCulture:
+          $ref: '#/components/schemas/TypeCulture'
+        certificationBiologique:
+          type: boolean
+          description: >
+            Indique si l'exploitation possede une certification "Agriculture
+            Biologique" valide pour l'annee en cours (Besoin 2).
+          example: true
+        rendementDeclareParHectare:
+          type: number
+          description: >
+            Rendement declare par hectare (en kg/ha), compare au seuil
+            critique du Ministere pour ce type de culture (Besoin 3).
+          minimum: 0
+          example: 450
+        localisation:
+          type: string
+          description: >
+            Localisation de l'exploitation, transmise a l'Agence Nationale
+            de Meteorologie pour verifier une eventuelle secheresse (Besoin 4).
+          example: "Kaffrine"
+
+    AllocationSubvention:
+      type: object
+      description: Detail financier final de l'allocation de subvention calculee.
+      additionalProperties: false
+      required:
+        - farmId
+        - montantSubventionBase
+        - bonusEcologique
+        - penaliteSousProduction
+        - indemniteClimatique
+        - montantFinal
+        - statutAllocation
+      properties:
+        farmId:
+          type: string
+          description: Identifiant unique de l'exploitation.
+          example: "FARM-00456"
+        montantSubventionBase:
+          type: number
+          description: Subvention de base selon la surface et le type de culture (Besoin 1).
+          example: 1250000
+        bonusEcologique:
+          type: number
+          description: Bonification de 15% si certification biologique valide (Besoin 2).
+          example: 187500
+        penaliteSousProduction:
+          type: number
+          description: >
+            Montant retenu pour sous-production inexpliquee (Besoin 3).
+            Egal a zero si le rendement est suffisant ou si une secheresse
+            severe a ete confirmee (Besoin 4).
+          example: 0
+        indemniteClimatique:
+          type: number
+          description: >
+            Fonds d'urgence forfaitaire ajoute si l'Agence Nationale de
+            Meteorologie confirme une secheresse severe (Besoin 4).
+          example: 0
+        montantFinal:
+          type: number
+          description: Montant final alloue a l'exploitation, apres bonus, penalite et indemnite.
+          example: 1437500
+        statutAllocation:
+          $ref: '#/components/schemas/StatutAllocation'
+          description: >
+            "EN_ATTENTE_AUDIT" si le montant final depasse strictement
+            10 000 000 XOF, avec notification de l'Inspection Phytosanitaire (Besoin 5).
+
+    ErreurValidation:
+      type: object
+      description: Detail d'une erreur de validation de la declaration.
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Le champ hectares doit etre strictement positif"
+        champs:
+          type: array
+          items:
+            type: string
+          example: ["hectares"]
