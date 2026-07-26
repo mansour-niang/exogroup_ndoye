@@ -156,7 +156,7 @@
                         </goals>
                         <configuration>
                             <generatorName>spring</generatorName>
-                            <inputSpec>${project.basedir}/src/main/resources/api/inventory.yaml</inputSpec>
+                            <inputSpec>${project.basedir}/src/main/resources/api/agritech.yaml</inputSpec>
                             <output>${project.build.directory}/generated-sources/api</output>
                             <apiPackage>org.example.projet_group_with_coudy.api</apiPackage>
                             <modelPackage>org.example.projet_group_with_coudy.dto</modelPackage>
