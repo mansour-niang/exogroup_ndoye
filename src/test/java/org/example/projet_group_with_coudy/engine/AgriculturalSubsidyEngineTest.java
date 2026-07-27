@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AgriculturalSubsidyEngineTest {
@@ -61,5 +62,39 @@ class AgriculturalSubsidyEngineTest {
 
         assertEquals(new BigDecimal("150000.00"), allocation.ecologicalBonus());
         assertEquals(new BigDecimal("1150000.00"), allocation.finalAmount());
+    }
+
+    @Test
+    void ampute_de_50_pourcent_si_rendement_sous_le_seuil_critique_et_pas_de_secheresse() {
+        // Besoin 3 : MIL, rendement 400 < seuil critique 500 -> penalite 50% ; pas de secheresse -> pas de fonds d'urgence
+        // base = 1000000.00 ; penalite = 500000.00 ; final = 500000.00
+        when(meteorologyPort.isSevereDrought("Kaffrine")).thenReturn(false);
+
+        AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
+        FarmDeclaration declaration = new FarmDeclaration(
+                "farm-4", new BigDecimal("10"), CropType.MIL, false, new BigDecimal("400"), "Kaffrine");
+
+        SubsidyAllocation allocation = engine.calculate(declaration);
+
+        assertEquals(new BigDecimal("500000.00"), allocation.underproductionPenalty());
+        assertEquals(new BigDecimal("0.00"), allocation.emergencyFund());
+        assertEquals(new BigDecimal("500000.00"), allocation.finalAmount());
+    }
+
+    @Test
+    void annule_la_penalite_et_ajoute_un_fonds_d_urgence_si_secheresse_severe_confirmee() {
+        // Meme rendement insuffisant, mais secheresse severe confirmee par l'Agence Nationale de Meteorologie
+        // base = 1000000.00 ; penalite = 0 (annulee) ; fonds d'urgence = 500000.00 ; final = 1500000.00
+        when(meteorologyPort.isSevereDrought("Kaffrine")).thenReturn(true);
+
+        AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
+        FarmDeclaration declaration = new FarmDeclaration(
+                "farm-5", new BigDecimal("10"), CropType.MIL, false, new BigDecimal("400"), "Kaffrine");
+
+        SubsidyAllocation allocation = engine.calculate(declaration);
+
+        assertEquals(new BigDecimal("0.00"), allocation.underproductionPenalty());
+        assertEquals(new BigDecimal("500000.00"), allocation.emergencyFund());
+        assertEquals(new BigDecimal("1500000.00"), allocation.finalAmount());
     }
 }
