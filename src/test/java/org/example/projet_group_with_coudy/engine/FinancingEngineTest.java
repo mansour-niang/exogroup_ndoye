@@ -129,4 +129,67 @@ class FinancingEngineTest {
 
         assertEquals(new BigDecimal("0.00"), plan.grossMonthlyScholarship());
     }
+
+    @Test
+    void majore_la_bourse_de_40_pourcent_avec_la_mention_tres_bien() {
+        // base = 20000*2.0 = 40000.00 ; excellence (mention TRES_BIEN) -> 40000*1.40 = 56000.00
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-9", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.TRES_BIEN, null, false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("56000.00"), plan.grossMonthlyScholarship());
+    }
+
+    @Test
+    void majore_la_bourse_de_40_pourcent_avec_une_moyenne_precedente_superieure_a_16() {
+        // meme calcul, excellence via moyenne (17 > 16) au lieu de la mention
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-10", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.PASSABLE, new BigDecimal("17"), false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("56000.00"), plan.grossMonthlyScholarship());
+    }
+
+    @Test
+    void ne_majore_pas_la_bourse_si_ni_mention_tres_bien_ni_moyenne_superieure_a_16() {
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-11", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.PASSABLE, new BigDecimal("15"), false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("40000.00"), plan.grossMonthlyScholarship());
+    }
+
+    @Test
+    void suspend_integralement_la_bourse_en_cas_de_redoublement_non_justifie_medicalement() {
+        // Meme avec une mention TRES_BIEN, le redoublement non justifie suspend tout
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-12", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.TRES_BIEN, null, true, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("0.00"), plan.grossMonthlyScholarship());
+    }
+
+    @Test
+    void ne_suspend_pas_la_bourse_si_le_redoublement_est_justifie_medicalement() {
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-13", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.PASSABLE, null, true, true);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("40000.00"), plan.grossMonthlyScholarship());
+    }
 }
