@@ -2,6 +2,7 @@ package org.example.projet_group_with_coudy.controller;
 
 import org.example.projet_group_with_coudy.engine.AgriculturalSubsidyEngine;
 import org.example.projet_group_with_coudy.mapper.AgriTechMapper;
+import org.example.projet_group_with_coudy.repository.SubsidyAllocationRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -22,6 +23,9 @@ class AgriTechValidationTest {
 
     @MockitoBean
     private AgriTechMapper mapper;
+
+    @MockitoBean
+    private SubsidyAllocationRepository repository;
 
     @Test
     void rejette_une_surface_en_hectares_negative_avec_400() throws Exception {

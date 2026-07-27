@@ -10,6 +10,7 @@ import org.example.projet_group_with_coudy.model.AllocationStatus;
 import org.example.projet_group_with_coudy.model.CropType;
 import org.example.projet_group_with_coudy.model.FarmDeclaration;
 import org.example.projet_group_with_coudy.model.SubsidyAllocation;
+import org.example.projet_group_with_coudy.repository.SubsidyAllocationRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,6 +22,8 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +34,9 @@ class AgriTechControllerTest {
 
     @Mock
     private AgriTechMapper mapper;
+
+    @Mock
+    private SubsidyAllocationRepository repository;
 
     @Test
     void delegue_la_conversion_au_mapper_et_le_calcul_au_moteur() {
@@ -51,10 +57,30 @@ class AgriTechControllerTest {
         when(engine.calculate(domainDeclaration)).thenReturn(allocation);
         when(mapper.toDto(allocation)).thenReturn(responseDto);
 
-        AgriTechController controller = new AgriTechController(engine, mapper);
+        AgriTechController controller = new AgriTechController(engine, mapper, repository);
         ResponseEntity<AllocationSubvention> response = controller.calculerAllocationSubvention(requestDto);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertSame(responseDto, response.getBody());
+    }
+
+    @Test
+    void persiste_l_allocation_de_subvention_calculee() {
+        DeclarationExploitation requestDto = new DeclarationExploitation(
+                "farm-1", new BigDecimal("10"), TypeCulture.MIL, true, new BigDecimal("600"), "Kaffrine");
+        FarmDeclaration domainDeclaration = new FarmDeclaration(
+                "farm-1", new BigDecimal("10"), CropType.MIL, true, new BigDecimal("600"), "Kaffrine");
+        SubsidyAllocation allocation = new SubsidyAllocation(
+                "farm-1", new BigDecimal("1000000.00"), new BigDecimal("150000.00"),
+                new BigDecimal("0.00"), new BigDecimal("0.00"),
+                new BigDecimal("1150000.00"), AllocationStatus.ALLOUE);
+
+        when(mapper.toDomain(requestDto)).thenReturn(domainDeclaration);
+        when(engine.calculate(domainDeclaration)).thenReturn(allocation);
+
+        AgriTechController controller = new AgriTechController(engine, mapper, repository);
+        controller.calculerAllocationSubvention(requestDto);
+
+        verify(repository, times(1)).save(allocation);
     }
 }
