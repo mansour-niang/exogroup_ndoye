@@ -1,6 +1,7 @@
 package org.example.projet_group_with_coudy.engine;
 
 import org.example.projet_group_with_coudy.model.ApprovalStatus;
+import org.example.projet_group_with_coudy.model.BaccalaureateMention;
 import org.example.projet_group_with_coudy.model.FinancingPlan;
 import org.example.projet_group_with_coudy.model.StudentApplication;
 import org.example.projet_group_with_coudy.model.StudyCycle;
@@ -18,6 +19,8 @@ public class FinancingEngine {
     private static final BigDecimal SEUIL_PAUVRETE_REVENU_ANNUEL = new BigDecimal("1200000");
     private static final BigDecimal DISTANCE_MINIMALE_MOBILITE_KM = new BigDecimal("50");
     private static final BigDecimal BOURSE_MOBILITE_BASE = new BigDecimal("20000");
+    private static final BigDecimal SEUIL_MOYENNE_EXCELLENCE = new BigDecimal("16");
+    private static final BigDecimal TAUX_MAJORATION_EXCELLENCE = new BigDecimal("0.40");
 
     private static final Map<StudyCycle, BigDecimal> FRAIS_INSCRIPTION_PAR_CYCLE = new EnumMap<>(StudyCycle.class);
 
@@ -37,7 +40,8 @@ public class FinancingEngine {
 
     public FinancingPlan calculate(StudentApplication application) {
         BigDecimal tuitionFees = calculateTuitionFees(application);
-        BigDecimal grossMonthlyScholarship = calculateMobilityScholarship(application);
+        BigDecimal mobilityScholarship = calculateMobilityScholarship(application);
+        BigDecimal grossMonthlyScholarship = applyExcellenceAndSuspension(application, mobilityScholarship);
         BigDecimal housingAidDeduction = BigDecimal.ZERO.setScale(SCALE);
         BigDecimal monthlyScholarship = grossMonthlyScholarship.subtract(housingAidDeduction);
 
@@ -76,5 +80,23 @@ public class FinancingEngine {
             return new BigDecimal("1.0");
         }
         return new BigDecimal("0.5");
+    }
+
+    private BigDecimal applyExcellenceAndSuspension(StudentApplication application, BigDecimal mobilityScholarship) {
+        boolean redoublementNonJustifie = application.repeatingYear() && !application.repeatMedicallyJustified();
+        if (redoublementNonJustifie) {
+            return BigDecimal.ZERO.setScale(SCALE);
+        }
+
+        boolean excellence = application.baccalaureateMention() == BaccalaureateMention.TRES_BIEN
+                || (application.previousYearAverage() != null
+                        && application.previousYearAverage().compareTo(SEUIL_MOYENNE_EXCELLENCE) > 0);
+
+        if (!excellence) {
+            return mobilityScholarship;
+        }
+        return mobilityScholarship
+                .multiply(BigDecimal.ONE.add(TAUX_MAJORATION_EXCELLENCE))
+                .setScale(SCALE, RoundingMode.HALF_UP);
     }
 }
