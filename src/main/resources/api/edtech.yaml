@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: API Moteur EdTech
+  description: >
+    API permettant de soumettre le dossier d'un etudiant et d'obtenir son
+    plan de financement (frais d'inscription, bourse mensuelle, statut
+    d'approbation).
+  version: 1.0.0
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: EdTech
+    description: Calcul du plan de financement d'un etudiant
+
+paths:
+  /plans-financement:
+    post:
+      tags:
+        - EdTech
+      operationId: calculerPlanFinancement
+      summary: Calcule le plan de financement d'un etudiant a partir de son dossier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DossierEtudiant'
+      responses:
+        '200':
+          description: Plan de financement calcule avec succes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanFinancement'
+        '400':
+          description: Dossier invalide (champs manquants ou incoherents)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErreurValidation'
+
+components:
+  schemas:
+
+    CycleEtudes:
+      type: string
+      description: Cycle d'etudes de l'etudiant (Besoin 1).
+      enum:
+        - LICENCE
+        - MASTER
+        - DOCTORAT
+
+    MentionBaccalaureat:
+      type: string
+      description: Mention obtenue au baccalaureat (Besoin 3).
+      enum:
+        - PASSABLE
+        - ASSEZ_BIEN
+        - BIEN
+        - TRES_BIEN
+
+    StatutApprobation:
+      type: string
+      description: Statut d'approbation du plan de financement (Besoin 5).
+      enum:
+        - APPROUVE
+        - VALIDATION_MANUELLE_REQUISE
+
+    DossierEtudiant:
+      type: object
+      description: Dossier d'un etudiant soumis pour la rentree academique.
+      additionalProperties: false
+      required:
+        - studentId
+        - cycleEtudes
+        - revenuAnnuelFamilial
+        - distanceDomicileKm
+        - mentionBaccalaureat
+        - redoublement
+        - redoublementJustifieMedical
+      properties:
+        studentId:
+          type: string
+          description: Identifiant unique de l'etudiant.
+          example: "ETU-00789"
+        cycleEtudes:
+          $ref: '#/components/schemas/CycleEtudes'
+        revenuAnnuelFamilial:
+          type: number
+          description: >
+            Revenu annuel de la famille, en XOF. Type number sans format afin
+            de garantir un mapping vers BigDecimal (precision monetaire requise).
+          minimum: 0
+          example: 900000
+        distanceDomicileKm:
+          type: number
+          description: Distance entre le domicile familial et le campus, en kilometres (Besoin 2).
+          minimum: 0
+          example: 75
+        mentionBaccalaureat:
+          $ref: '#/components/schemas/MentionBaccalaureat'
+        moyenneAnneePrecedente:
+          type: number
+          description: >
+            Moyenne obtenue l'annee precedente sur 20 (Besoin 3). Absent pour
+            un etudiant entrant en premiere annee.
+          minimum: 0
+          maximum: 20
+          nullable: true
+          example: 17.2
+        redoublement:
+          type: boolean
+          description: Indique si l'etudiant est en situation de redoublement (Besoin 3).
+          example: false
+        redoublementJustifieMedical:
+          type: boolean
+          description: >
+            Indique si le redoublement est justifie par des raisons medicales
+            (Besoin 3). Sans effet si redoublement est false.
+          example: false
+
+    PlanFinancement:
+      type: object
+      description: Plan de financement final calcule pour l'etudiant.
+      additionalProperties: false
+      required:
+        - studentId
+        - fraisInscription
+        - bourseMensuelleBrute
+        - deductionAideLogement
+        - bourseMensuelle
+        - statutApprobation
+      properties:
+        studentId:
+          type: string
+          description: Identifiant unique de l'etudiant.
+          example: "ETU-00789"
+        fraisInscription:
+          type: number
+          description: >
+            Frais d'inscription a payer selon le cycle, ou 0 si l'etudiant
+            est exonere (revenu familial sous le seuil de pauvrete) (Besoin 1).
+          example: 0
+        bourseMensuelleBrute:
+          type: number
+          description: >
+            Bourse mensuelle avant deduction de l'aide au logement
+            (mobilite x coefficient social x majoration excellence,
+            ou 0 si suspendue pour redoublement non justifie) (Besoin 2, 3).
+          example: 42000
+        deductionAideLogement:
+          type: number
+          description: >
+            Montant de l'aide au logement deja percue par l'etudiant aupres
+            d'un autre organisme d'Etat, deduit de la bourse (Besoin 4).
+          example: 0
+        bourseMensuelle:
+          type: number
+          description: Bourse mensuelle finale, apres deduction de l'aide au logement.
+          example: 42000
+        statutApprobation:
+          $ref: '#/components/schemas/StatutApprobation'
+          description: >
+            "VALIDATION_MANUELLE_REQUISE" si la bourse mensuelle depasse le
+            plafond legal, avec routage vers l'API du Tresor Public pour une
+            derogation exceptionnelle (Besoin 5).
+
+    ErreurValidation:
+      type: object
+      description: Detail d'une erreur de validation du dossier etudiant.
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Le champ revenuAnnuelFamilial doit etre positif ou nul"
+        champs:
+          type: array
+          items:
+            type: string
+          example: ["revenuAnnuelFamilial"]
