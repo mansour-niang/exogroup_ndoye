@@ -22,6 +22,7 @@ public class AgriculturalSubsidyEngine {
     private static final BigDecimal TAUX_BONUS_ECOLOGIQUE = new BigDecimal("0.15");
     private static final BigDecimal TAUX_PENALITE_SOUS_PRODUCTION = new BigDecimal("0.50");
     private static final BigDecimal FONDS_URGENCE_FORFAITAIRE = new BigDecimal("500000");
+    private static final BigDecimal SEUIL_AUDIT_PHYTOSANITAIRE = new BigDecimal("10000000.00");
 
     private static final Map<CropType, BigDecimal> SEUILS_CRITIQUES_KG_PAR_HECTARE = new EnumMap<>(CropType.class);
 
@@ -61,6 +62,11 @@ public class AgriculturalSubsidyEngine {
 
         BigDecimal finalAmount = subsidyBeforePenalty.subtract(underproductionPenalty).add(emergencyFund);
 
+        boolean auditRequis = finalAmount.compareTo(SEUIL_AUDIT_PHYTOSANITAIRE) > 0;
+        if (auditRequis) {
+            phytosanitaryInspectionPort.reportForInspection(declaration.farmId(), finalAmount);
+        }
+
         return new SubsidyAllocation(
                 declaration.farmId(),
                 baseSubsidy,
@@ -68,7 +74,7 @@ public class AgriculturalSubsidyEngine {
                 underproductionPenalty,
                 emergencyFund,
                 finalAmount,
-                AllocationStatus.ALLOUE);
+                auditRequis ? AllocationStatus.EN_ATTENTE_AUDIT : AllocationStatus.ALLOUE);
     }
 
     private BigDecimal calculateBaseSubsidy(FarmDeclaration declaration) {
