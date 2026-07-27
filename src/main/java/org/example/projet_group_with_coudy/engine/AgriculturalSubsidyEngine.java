@@ -17,6 +17,7 @@ public class AgriculturalSubsidyEngine {
     private static final BigDecimal RATE_EXPORT_PER_HECTARE = new BigDecimal("50000");
     private static final BigDecimal RATE_VIVRIERE_PER_HECTARE = new BigDecimal("100000");
     private static final Set<CropType> VIVRIERE_CROPS = Set.of(CropType.MIL, CropType.SORGHO, CropType.MAIS);
+    private static final BigDecimal TAUX_BONUS_ECOLOGIQUE = new BigDecimal("0.15");
 
     private final MeteorologyPort meteorologyPort;
     private final PhytosanitaryInspectionPort phytosanitaryInspectionPort;
@@ -29,7 +30,7 @@ public class AgriculturalSubsidyEngine {
 
     public SubsidyAllocation calculate(FarmDeclaration declaration) {
         BigDecimal baseSubsidy = calculateBaseSubsidy(declaration);
-        BigDecimal ecologicalBonus = BigDecimal.ZERO.setScale(SCALE);
+        BigDecimal ecologicalBonus = calculateEcologicalBonus(declaration, baseSubsidy);
         BigDecimal underproductionPenalty = BigDecimal.ZERO.setScale(SCALE);
         BigDecimal emergencyFund = BigDecimal.ZERO.setScale(SCALE);
 
@@ -50,5 +51,12 @@ public class AgriculturalSubsidyEngine {
                 ? RATE_VIVRIERE_PER_HECTARE
                 : RATE_EXPORT_PER_HECTARE;
         return declaration.hectares().multiply(ratePerHectare).setScale(SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateEcologicalBonus(FarmDeclaration declaration, BigDecimal baseSubsidy) {
+        if (!declaration.organicCertified()) {
+            return BigDecimal.ZERO.setScale(SCALE);
+        }
+        return baseSubsidy.multiply(TAUX_BONUS_ECOLOGIQUE).setScale(SCALE, RoundingMode.HALF_UP);
     }
 }
