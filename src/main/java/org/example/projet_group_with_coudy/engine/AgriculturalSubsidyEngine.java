@@ -9,6 +9,8 @@ import org.example.projet_group_with_coudy.port.PhytosanitaryInspectionPort;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Set;
 
 public class AgriculturalSubsidyEngine {
@@ -18,6 +20,18 @@ public class AgriculturalSubsidyEngine {
     private static final BigDecimal RATE_VIVRIERE_PER_HECTARE = new BigDecimal("100000");
     private static final Set<CropType> VIVRIERE_CROPS = Set.of(CropType.MIL, CropType.SORGHO, CropType.MAIS);
     private static final BigDecimal TAUX_BONUS_ECOLOGIQUE = new BigDecimal("0.15");
+    private static final BigDecimal TAUX_PENALITE_SOUS_PRODUCTION = new BigDecimal("0.50");
+    private static final BigDecimal FONDS_URGENCE_FORFAITAIRE = new BigDecimal("500000");
+
+    private static final Map<CropType, BigDecimal> SEUILS_CRITIQUES_KG_PAR_HECTARE = new EnumMap<>(CropType.class);
+
+    static {
+        SEUILS_CRITIQUES_KG_PAR_HECTARE.put(CropType.MIL, new BigDecimal("500"));
+        SEUILS_CRITIQUES_KG_PAR_HECTARE.put(CropType.SORGHO, new BigDecimal("600"));
+        SEUILS_CRITIQUES_KG_PAR_HECTARE.put(CropType.MAIS, new BigDecimal("1500"));
+        SEUILS_CRITIQUES_KG_PAR_HECTARE.put(CropType.ARACHIDE, new BigDecimal("800"));
+        SEUILS_CRITIQUES_KG_PAR_HECTARE.put(CropType.COTON, new BigDecimal("1000"));
+    }
 
     private final MeteorologyPort meteorologyPort;
     private final PhytosanitaryInspectionPort phytosanitaryInspectionPort;
@@ -31,10 +45,21 @@ public class AgriculturalSubsidyEngine {
     public SubsidyAllocation calculate(FarmDeclaration declaration) {
         BigDecimal baseSubsidy = calculateBaseSubsidy(declaration);
         BigDecimal ecologicalBonus = calculateEcologicalBonus(declaration, baseSubsidy);
-        BigDecimal underproductionPenalty = BigDecimal.ZERO.setScale(SCALE);
-        BigDecimal emergencyFund = BigDecimal.ZERO.setScale(SCALE);
+        BigDecimal subsidyBeforePenalty = baseSubsidy.add(ecologicalBonus);
 
-        BigDecimal finalAmount = baseSubsidy.add(ecologicalBonus).subtract(underproductionPenalty).add(emergencyFund);
+        boolean secheresseSevere = meteorologyPort.isSevereDrought(declaration.location());
+        boolean rendementInsuffisant = declaration.declaredYieldPerHectare()
+                .compareTo(SEUILS_CRITIQUES_KG_PAR_HECTARE.get(declaration.cropType())) < 0;
+
+        BigDecimal underproductionPenalty = (rendementInsuffisant && !secheresseSevere)
+                ? subsidyBeforePenalty.multiply(TAUX_PENALITE_SOUS_PRODUCTION).setScale(SCALE, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(SCALE);
+
+        BigDecimal emergencyFund = secheresseSevere
+                ? FONDS_URGENCE_FORFAITAIRE.setScale(SCALE, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO.setScale(SCALE);
+
+        BigDecimal finalAmount = subsidyBeforePenalty.subtract(underproductionPenalty).add(emergencyFund);
 
         return new SubsidyAllocation(
                 declaration.farmId(),
