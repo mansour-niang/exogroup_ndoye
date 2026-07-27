@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FinancingEngineTest {
@@ -191,5 +192,49 @@ class FinancingEngineTest {
         FinancingPlan plan = engine.calculate(application);
 
         assertEquals(new BigDecimal("40000.00"), plan.grossMonthlyScholarship());
+    }
+
+    @Test
+    void deduit_le_montant_exact_de_l_aide_au_logement_de_la_bourse() {
+        // base = 20000*2.0 = 40000.00 ; aide au logement 15000.00 -> net = 25000.00
+        when(housingAidPort.getHousingAidAmount("etu-14")).thenReturn(new BigDecimal("15000.00"));
+
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-14", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.PASSABLE, null, false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("15000.00"), plan.housingAidDeduction());
+        assertEquals(new BigDecimal("25000.00"), plan.monthlyScholarship());
+    }
+
+    @Test
+    void ne_deduit_rien_si_l_etudiant_ne_percoit_aucune_aide_au_logement() {
+        when(housingAidPort.getHousingAidAmount("etu-15")).thenReturn(BigDecimal.ZERO);
+
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-15", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.PASSABLE, null, false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("40000.00"), plan.monthlyScholarship());
+    }
+
+    @Test
+    void plafonne_la_bourse_nette_a_zero_si_l_aide_au_logement_depasse_la_bourse_brute() {
+        when(housingAidPort.getHousingAidAmount("etu-16")).thenReturn(new BigDecimal("50000.00"));
+
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-16", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.PASSABLE, null, false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("0.00"), plan.monthlyScholarship());
     }
 }
