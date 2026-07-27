@@ -1,5 +1,6 @@
 package org.example.projet_group_with_coudy.engine;
 
+import org.example.projet_group_with_coudy.model.AllocationStatus;
 import org.example.projet_group_with_coudy.model.CropType;
 import org.example.projet_group_with_coudy.model.FarmDeclaration;
 import org.example.projet_group_with_coudy.model.SubsidyAllocation;
@@ -13,6 +14,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -96,5 +102,38 @@ class AgriculturalSubsidyEngineTest {
         assertEquals(new BigDecimal("0.00"), allocation.underproductionPenalty());
         assertEquals(new BigDecimal("500000.00"), allocation.emergencyFund());
         assertEquals(new BigDecimal("1500000.00"), allocation.finalAmount());
+    }
+
+    @Test
+    void notifie_l_inspection_phytosanitaire_si_le_montant_final_depasse_strictement_10_millions() {
+        // MAIS (vivriere) = 100000 XOF/ha, 110 ha => 11000000.00 (> 10000000)
+        when(meteorologyPort.isSevereDrought("Kaffrine")).thenReturn(false);
+
+        AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
+        FarmDeclaration declaration = new FarmDeclaration(
+                "farm-6", new BigDecimal("110"), CropType.MAIS, false, new BigDecimal("1600"), "Kaffrine");
+
+        SubsidyAllocation allocation = engine.calculate(declaration);
+
+        assertEquals(new BigDecimal("11000000.00"), allocation.finalAmount());
+        assertEquals(AllocationStatus.EN_ATTENTE_AUDIT, allocation.allocationStatus());
+        verify(phytosanitaryInspectionPort, times(1))
+                .reportForInspection("farm-6", new BigDecimal("11000000.00"));
+    }
+
+    @Test
+    void ne_notifie_pas_l_inspection_phytosanitaire_si_le_montant_final_est_exactement_10_millions() {
+        // MAIS (vivriere) = 100000 XOF/ha, 100 ha => 10000000.00 pile
+        when(meteorologyPort.isSevereDrought("Kaffrine")).thenReturn(false);
+
+        AgriculturalSubsidyEngine engine = new AgriculturalSubsidyEngine(meteorologyPort, phytosanitaryInspectionPort);
+        FarmDeclaration declaration = new FarmDeclaration(
+                "farm-7", new BigDecimal("100"), CropType.MAIS, false, new BigDecimal("1600"), "Kaffrine");
+
+        SubsidyAllocation allocation = engine.calculate(declaration);
+
+        assertEquals(new BigDecimal("10000000.00"), allocation.finalAmount());
+        assertEquals(AllocationStatus.ALLOUE, allocation.allocationStatus());
+        verify(phytosanitaryInspectionPort, never()).reportForInspection(anyString(), any());
     }
 }
