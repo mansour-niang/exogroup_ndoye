@@ -18,7 +18,7 @@ public class FinancingEngine {
     private static final int SCALE = 2;
     private static final BigDecimal SEUIL_PAUVRETE_REVENU_ANNUEL = new BigDecimal("1200000");
     private static final BigDecimal DISTANCE_MINIMALE_MOBILITE_KM = new BigDecimal("50");
-    private static final BigDecimal BOURSE_MOBILITE_BASE = new BigDecimal("20000");
+    private static final BigDecimal BOURSE_MOBILITE_BASE = new BigDecimal("60000");
     private static final BigDecimal SEUIL_MOYENNE_EXCELLENCE = new BigDecimal("16");
     private static final BigDecimal TAUX_MAJORATION_EXCELLENCE = new BigDecimal("0.40");
 

@@ -78,7 +78,7 @@ class FinancingEngineTest {
     @Test
     void verse_une_bourse_de_mobilite_avec_coefficient_2_si_revenu_sous_le_seuil() {
         // Besoin 2 : distance 75km > 50km -> bourse de base ; revenu <= seuil (1200000) -> coefficient 2.0
-        // 20000 * 2.0 = 40000.00
+        // 60000 * 2.0 = 120000.00
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
         StudentApplication application = new StudentApplication(
                 "etu-4", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
@@ -86,12 +86,12 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("40000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("120000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
     void verse_une_bourse_de_mobilite_avec_coefficient_1_5_entre_1_et_2_fois_le_seuil() {
-        // revenu (2000000) entre 1x et 2x le seuil (1200000-2400000) -> coefficient 1.5 ; 20000*1.5=30000.00
+        // revenu (2000000) entre 1x et 2x le seuil (1200000-2400000) -> coefficient 1.5 ; 60000*1.5=90000.00
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
         StudentApplication application = new StudentApplication(
                 "etu-5", StudyCycle.LICENCE, new BigDecimal("2000000"), new BigDecimal("75"),
@@ -99,12 +99,12 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("30000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("90000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
     void verse_une_bourse_de_mobilite_avec_coefficient_1_entre_2_et_4_fois_le_seuil() {
-        // revenu (4000000) entre 2x et 4x le seuil (2400000-4800000) -> coefficient 1.0 ; 20000*1.0=20000.00
+        // revenu (4000000) entre 2x et 4x le seuil (2400000-4800000) -> coefficient 1.0 ; 60000*1.0=60000.00
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
         StudentApplication application = new StudentApplication(
                 "etu-6", StudyCycle.LICENCE, new BigDecimal("4000000"), new BigDecimal("75"),
@@ -112,12 +112,12 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("20000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("60000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
     void verse_une_bourse_de_mobilite_avec_coefficient_0_5_au_dela_de_4_fois_le_seuil() {
-        // revenu (5000000) > 4x le seuil (4800000) -> coefficient 0.5 ; 20000*0.5=10000.00
+        // revenu (5000000) > 4x le seuil (4800000) -> coefficient 0.5 ; 60000*0.5=30000.00
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
         StudentApplication application = new StudentApplication(
                 "etu-7", StudyCycle.LICENCE, new BigDecimal("5000000"), new BigDecimal("75"),
@@ -125,7 +125,7 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("10000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("30000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
@@ -142,7 +142,7 @@ class FinancingEngineTest {
 
     @Test
     void majore_la_bourse_de_40_pourcent_avec_la_mention_tres_bien() {
-        // base = 20000*2.0 = 40000.00 ; excellence (mention TRES_BIEN) -> 40000*1.40 = 56000.00
+        // base = 60000*2.0 = 120000.00 ; excellence (mention TRES_BIEN) -> 120000*1.40 = 168000.00
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
         StudentApplication application = new StudentApplication(
                 "etu-9", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
@@ -150,7 +150,7 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("56000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("168000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
@@ -163,7 +163,7 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("56000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("168000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
@@ -175,7 +175,7 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("40000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("120000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
@@ -200,12 +200,12 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("40000.00"), plan.grossMonthlyScholarship());
+        assertEquals(new BigDecimal("120000.00"), plan.grossMonthlyScholarship());
     }
 
     @Test
     void deduit_le_montant_exact_de_l_aide_au_logement_de_la_bourse() {
-        // base = 20000*2.0 = 40000.00 ; aide au logement 15000.00 -> net = 25000.00
+        // base = 60000*2.0 = 120000.00 ; aide au logement 15000.00 -> net = 105000.00
         when(housingAidPort.getHousingAidAmount("etu-14")).thenReturn(new BigDecimal("15000.00"));
 
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
@@ -216,7 +216,7 @@ class FinancingEngineTest {
         FinancingPlan plan = engine.calculate(application);
 
         assertEquals(new BigDecimal("15000.00"), plan.housingAidDeduction());
-        assertEquals(new BigDecimal("25000.00"), plan.monthlyScholarship());
+        assertEquals(new BigDecimal("105000.00"), plan.monthlyScholarship());
     }
 
     @Test
@@ -230,12 +230,13 @@ class FinancingEngineTest {
 
         FinancingPlan plan = engine.calculate(application);
 
-        assertEquals(new BigDecimal("40000.00"), plan.monthlyScholarship());
+        assertEquals(new BigDecimal("120000.00"), plan.monthlyScholarship());
     }
 
     @Test
     void plafonne_la_bourse_nette_a_zero_si_l_aide_au_logement_depasse_la_bourse_brute() {
-        when(housingAidPort.getHousingAidAmount("etu-16")).thenReturn(new BigDecimal("50000.00"));
+        // gross = 120000.00 ; aide 130000.00 > gross -> plancher a 0
+        when(housingAidPort.getHousingAidAmount("etu-16")).thenReturn(new BigDecimal("130000.00"));
 
         FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
         StudentApplication application = new StudentApplication(
