@@ -1,5 +1,6 @@
 package org.example.projet_group_with_coudy.engine;
 
+import org.example.projet_group_with_coudy.model.ApprovalStatus;
 import org.example.projet_group_with_coudy.model.BaccalaureateMention;
 import org.example.projet_group_with_coudy.model.FinancingPlan;
 import org.example.projet_group_with_coudy.model.StudentApplication;
@@ -15,7 +16,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -246,5 +251,37 @@ class FinancingEngineTest {
         FinancingPlan plan = engine.calculate(application);
 
         assertEquals(new BigDecimal("0.00"), plan.monthlyScholarship());
+    }
+
+    @Test
+    void route_vers_le_tresor_public_si_la_bourse_mensuelle_depasse_strictement_le_plafond_legal() {
+        // gross = 60000*2.0*1.40 = 168000.00 (> plafond legal 150000.00), pas d'aide au logement
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-17", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.TRES_BIEN, null, false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("168000.00"), plan.monthlyScholarship());
+        assertEquals(ApprovalStatus.VALIDATION_MANUELLE_REQUISE, plan.approvalStatus());
+        verify(treasuryPort, times(1)).requestExceptionalWaiver("etu-17", new BigDecimal("168000.00"));
+    }
+
+    @Test
+    void approuve_directement_si_la_bourse_mensuelle_est_exactement_egale_au_plafond_legal() {
+        // gross = 168000.00 ; aide au logement 18000.00 -> net = 150000.00 pile (plafond legal)
+        when(housingAidPort.getHousingAidAmount("etu-18")).thenReturn(new BigDecimal("18000.00"));
+
+        FinancingEngine engine = new FinancingEngine(housingAidPort, treasuryPort);
+        StudentApplication application = new StudentApplication(
+                "etu-18", StudyCycle.LICENCE, new BigDecimal("1000000"), new BigDecimal("75"),
+                BaccalaureateMention.TRES_BIEN, null, false, false);
+
+        FinancingPlan plan = engine.calculate(application);
+
+        assertEquals(new BigDecimal("150000.00"), plan.monthlyScholarship());
+        assertEquals(ApprovalStatus.APPROUVE, plan.approvalStatus());
+        verify(treasuryPort, never()).requestExceptionalWaiver(anyString(), any());
     }
 }
