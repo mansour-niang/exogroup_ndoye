@@ -6,6 +6,7 @@ import org.example.projet_group_with_coudy.model.StudentApplication;
 import org.example.projet_group_with_coudy.model.StudyCycle;
 import org.example.projet_group_with_coudy.port.HousingAidPort;
 import org.example.projet_group_with_coudy.port.TreasuryPort;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +26,13 @@ class FinancingEngineTest {
 
     @Mock
     private TreasuryPort treasuryPort;
+
+    @BeforeEach
+    void aucuneAideAuLogementParDefaut() {
+        // Le port est toujours interroge (Besoin 4) ; par defaut, aucune aide percue.
+        // Les tests du Besoin 4 surchargent ce stub pour un studentId precis.
+        when(housingAidPort.getHousingAidAmount(anyString())).thenReturn(BigDecimal.ZERO);
+    }
 
     @Test
     void applique_le_tarif_licence_quand_le_revenu_depasse_le_seuil_de_pauvrete() {

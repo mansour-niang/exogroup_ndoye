@@ -42,8 +42,10 @@ public class FinancingEngine {
         BigDecimal tuitionFees = calculateTuitionFees(application);
         BigDecimal mobilityScholarship = calculateMobilityScholarship(application);
         BigDecimal grossMonthlyScholarship = applyExcellenceAndSuspension(application, mobilityScholarship);
-        BigDecimal housingAidDeduction = BigDecimal.ZERO.setScale(SCALE);
-        BigDecimal monthlyScholarship = grossMonthlyScholarship.subtract(housingAidDeduction);
+        BigDecimal housingAidDeduction = housingAidPort.getHousingAidAmount(application.studentId())
+                .setScale(SCALE, RoundingMode.HALF_UP);
+        BigDecimal monthlyScholarship = grossMonthlyScholarship.subtract(housingAidDeduction)
+                .max(BigDecimal.ZERO.setScale(SCALE));
 
         return new FinancingPlan(
                 application.studentId(),
