@@ -21,6 +21,7 @@ public class FinancingEngine {
     private static final BigDecimal BOURSE_MOBILITE_BASE = new BigDecimal("60000");
     private static final BigDecimal SEUIL_MOYENNE_EXCELLENCE = new BigDecimal("16");
     private static final BigDecimal TAUX_MAJORATION_EXCELLENCE = new BigDecimal("0.40");
+    private static final BigDecimal PLAFOND_LEGAL_BOURSE_MENSUELLE = new BigDecimal("150000.00");
 
     private static final Map<StudyCycle, BigDecimal> FRAIS_INSCRIPTION_PAR_CYCLE = new EnumMap<>(StudyCycle.class);
 
@@ -47,13 +48,18 @@ public class FinancingEngine {
         BigDecimal monthlyScholarship = grossMonthlyScholarship.subtract(housingAidDeduction)
                 .max(BigDecimal.ZERO.setScale(SCALE));
 
+        boolean depassePlafond = monthlyScholarship.compareTo(PLAFOND_LEGAL_BOURSE_MENSUELLE) > 0;
+        if (depassePlafond) {
+            treasuryPort.requestExceptionalWaiver(application.studentId(), monthlyScholarship);
+        }
+
         return new FinancingPlan(
                 application.studentId(),
                 tuitionFees,
                 grossMonthlyScholarship,
                 housingAidDeduction,
                 monthlyScholarship,
-                ApprovalStatus.APPROUVE);
+                depassePlafond ? ApprovalStatus.VALIDATION_MANUELLE_REQUISE : ApprovalStatus.APPROUVE);
     }
 
     private BigDecimal calculateTuitionFees(StudentApplication application) {
